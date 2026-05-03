@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>ZB Suites Baguio | Smart Luxury Check-In</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="toast-container" id="toastContainer"></div>
+
+    <header class="header">
+        <div class="logo">
+            <div class="icon">ZB</div>
+            <span>ZB Suites Baguio</span>
+        </div>
+        <button id="hamburgerBtn" class="hamburger" aria-label="Toggle navigation menu" aria-expanded="false" onclick="toggleNav()">
+            <span></span><span></span><span></span>
+        </button>
+        <nav id="mainNav" class="nav-menu">
+            <button onclick="showSection('home')" class="active" data-section="home"> Home</button>
+            <button onclick="showSection('checkin')" data-section="checkin"> Check-In</button>
+            <button onclick="showSection('access')" data-section="access"> Access</button>
+            <button onclick="showSection('services')" data-section="services"> Services</button>
+            <button onclick="showSection('gallery')" data-section="gallery"> Gallery</button>
+            <button onclick="showSection('checkout')" data-section="checkout"> Check-Out</button>
+            <button class="admin-btn-mobile" onclick="showAdminLogin()"> Admin</button>
+        </nav>
+        <button class="admin-btn" id="adminNavBtn" onclick="showAdminLogin()"> Admin</button>
+
+    </header>
+
+    <!-- Admin Login Modal -->
+    <div class="modal-overlay" id="adminLoginModal" style="display:none;" onclick="closeAdminLogin(event)">
+        <div class="modal" onclick="event.stopPropagation()">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                <h2 style="margin-bottom:0;"> Admin Access</h2>
+                <button onclick="closeAdminLogin()" style="background:none;border:none;font-size:1.4rem;cursor:pointer;color:var(--text-muted);line-height:1;">&times;</button>
+            </div>
+            <p class="subtitle">Enter your credentials to access the admin dashboard.</p>
+            <form id="adminLoginForm" onsubmit="handleAdminLogin(event);return false;">
+                <div class="form-group">
+                    <label>Admin Password *</label>
+                    <input type="password" id="adminPassword" placeholder="Enter master password" required autocomplete="off">
+                </div>
+                <div class="flex-wrap gap-1" style="margin-top:18px;">
+                    <button type="submit" class="btn btn-primary" style="flex:1;"> Login</button>
+                    <button type="button" class="btn btn-outline" onclick="closeAdminLogin()">Cancel</button>
+                </div>
+            </form>
+            <div id="adminLoginError" style="display:none;background:var(--danger-bg);color:var(--danger);padding:12px;border-radius:var(--radius-sm);margin-top:14px;text-align:center;font-size:0.85rem;">
+                 Invalid password. Please try again.
+            </div>
+            <div style="margin-top:18px;padding-top:14px;border-top:1px solid var(--border);text-align:center;">
+                <small style="color:var(--text-muted);">Demo password: <code>admin123</code></small>
+            </div>
+        </div>
+    </div>
+
+    <div class="main-container">
+
+        <!-- HOME SECTION -->
+        <section class="section active" id="section-home">
+            <div class="card photo-strip-card luxury-card">
+                <h3> Visual Highlights</h3>
+                <p class="subtitle">A curated look at ZB Suites Baguio through the lens</p>
+                <div class="home-photo-strip" id="homePhotoStrip"></div>
+            </div>
+            <div class="card luxury-card">
+                <h2>Welcome to ZB Suites Baguio</h2>
+                <p class="subtitle">Smart QR Self Check-In · Cashless · Seamless mountain hospitality</p>
+                <div class="grid-2 mt-2">
+                    <div>
+                        <h3>🏅 Signature Features</h3>
+                        <ul class="feature-list">
+                            <li> Self Check-In / Check-Out</li>
+                            <li> Cashless Ecosystem (GCash, Bank, Card)</li>
+                            <li> QR Room &amp; Elevator Access</li>
+                            <li> QR Parking Control</li>
+                            <li> In-Room QR Ordering</li>
+                            <li> Smart Housekeeping</li>
+                            <li> Automated Billing &amp; Analytics</li>
+                        </ul>
+                    </div>
+                    <div class="hero-highlight-panel">
+                        <h3>Guest Journey</h3>
+                        <div class="journey-steps">
+                            <span>Register</span>
+                            <span>Pay Cashless</span>
+                            <span>Get QR Access</span>
+                            <span>Order Services</span>
+                            <span>Auto Billing</span>
+                        </div>
+                        <p class="subtitle">A seamless digital stay from check-in to check-out.</p>
+                    </div>
+                </div>
+                <div class="text-center mt-2">
+                    <button class="btn btn-gold btn-cta" onclick="showSection('checkin')"> Start Check-In Now</button>
+                </div>
+            </div>
+            <div class="card luxury-card">
+                <h3> Room Availability</h3>
+                <div id="roomTypesContainer"></div>
+                <p class="legend-text">🟢 Available &nbsp;|&nbsp; 🔴 Occupied &nbsp;|&nbsp; Click type header to expand</p>
+            </div>
+        </section>
+
+        <!-- CHECK-IN SECTION -->
+        <section class="section" id="section-checkin">
+            <div class="card luxury-card" id="registrationCard">
+                <h2>Check-In</h2>
+                <p class="subtitle">Effortless registration. All fields marked * are required.</p>
+                <form id="registrationForm" onsubmit="handleRegistration(event)">
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label>Full Name *</label>
+                            <input type="text" id="regName" placeholder="Juan Dela Cruz" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Email Address *</label>
+                            <input type="email" id="regEmail" placeholder="juan@email.com" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Phone Number *</label>
+                            <input type="tel" id="regPhone" placeholder="09171234567" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Room Type *</label>
+                            <select id="regRoomType" required onchange="updatePriceDisplay()">
+                                <option value="">— Select Room Type —</option>
+                                <option value="Standard">Standard Room — ₱1,500/night</option>
+                                <option value="Deluxe">Deluxe Room — ₱2,500/night</option>
+                                <option value="Suite">Suite Room — ₱4,000/night</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Number of Nights *</label>
+                            <input type="number" id="regNights" min="1" max="30" value="1" required onchange="updatePriceDisplay()">
+                        </div>
+                        <div class="form-group">
+                            <label>Vehicle Plate (optional)</label>
+                            <input type="text" id="regVehicle" placeholder="ABC-1234">
+                        </div>
+                    </div>
+                    <div class="price-preview">
+                        <strong>Estimated Total:</strong>
+                        <span id="priceDisplay" class="price-highlight">₱0.00</span>
+                        <span class="parking-note">(Parking: +₱200/night if vehicle registered)</span>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-block"> Proceed to Payment</button>
+                </form>
+            </div>
+
+            <div class="card luxury-card" id="paymentCard" style="display:none;">
+                <h2>Cashless Payment</h2>
+                <p class="subtitle">Select your preferred payment method</p>
+                <div id="paymentDetails" class="payment-summary"></div>
+                <div class="payment-header-note"> Secure channels only. All transactions are encrypted and protected.</div>
+                <div class="grid-3 payment-methods payment-methods-enhanced">
+                    <button type="button" class="payment-method payment-method-card" onclick="processPayment('GCash')">
+                        <strong> GCash</strong>
+                        <small>Instant mobile payment</small>
+                    </button>
+                    <button type="button" class="payment-method payment-method-card" onclick="processPayment('Bank Transfer')">
+                        <strong> Bank Transfer</strong>
+                        <small>BPI, BDO, Metrobank</small>
+                    </button>
+                    <button type="button" class="payment-method payment-method-card" onclick="processPayment('Credit Card')">
+                        <strong> Credit/Debit Card</strong>
+                        <small>Visa, Mastercard, JCB</small>
+                    </button>
+                </div>
+                <button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById('paymentCard').style.display='none';document.getElementById('registrationCard').style.display='block';">
+                    ← Back to Registration
+                </button>
+            </div>
+
+            <!-- QR RESULT CARD - NEW -->
+            <div class="card luxury-card" id="qrResultCard" style="display:none;">
+                <h2> Check-In Complete!</h2>
+                <p class="subtitle">Your room is ready. Save/print this QR code for access.</p>
+                <div class="text-center" style="margin: 24px 0;">
+                    <div id="assignedRoom" style="font-size: 2.2rem; font-family: var(--font-serif); color: var(--success); font-weight: 700; margin-bottom: 12px;">Room XXX</div>
+                    <div class="qr-display" id="qrCodeDisplay">
+                        <div style="width: 220px; height: 220px; background: var(--pine-pale); border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; margin: 0 auto 12px; border: 3px solid var(--success); box-shadow: var(--shadow);">
+                            QR Loading...
+                        </div>
+                        <div class="qr-label">Scan QR for Room & Elevator Access</div>
+                    </div>
+                </div>
+                <div class="flex-wrap gap-1">
+                    <button onclick="showSection('access')" class="btn btn-primary" style="flex:1;">🔑 Access Control</button>
+                    <button onclick="showSection('services')" class="btn btn-gold" style="flex:1;">🍽️ Order Services</button>
+                </div>
+                <div style="text-align:center; margin-top:16px;">
+                    <button class="btn btn-outline btn-sm" onclick="window.location.reload()">🔄 New Check-In</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- ACCESS SECTION -->
+        <section class="section" id="section-access">
+            <div class="card luxury-card">
+                <h2>QR Access Control</h2>
+                <p class="subtitle">Scan your QR to access rooms, elevator, and parking.</p>
+                <div class="form-group">
+                    <label>Select Your Room</label>
+                    <select id="accessGuestSelect" onchange="updateAccessInfo()"></select>
+                </div>
+            </div>
+            <div id="accessPanels" style="display:none;">
+                <div class="card luxury-card" id="accessQrCard">
+                    <h3> Your QR Access Pass</h3>
+                    <div style="text-align:center;" id="accessQrContent"></div>
+                </div>
+                <div class="card luxury-card">
+                    <h3> Simulate QR Scan</h3>
+                    <p class="subtitle">Tap any access point below to simulate scanning your QR code.</p>
+<div class="grid-3" id="accessSimulators">
+    <div class="access-card" data-type="rooms" onclick="simulateAccess('rooms')">
+        <div class="access-icon">🏠</div>
+        <h4>Rooms</h4>
+        <div class="access-indicator" id="indicator-rooms">
+            <span class="indicator-circle">⏳</span>
+        </div>
+        <p>Scan QR to enter room</p>
+    </div>
+    <div class="access-card" data-type="elevator" onclick="simulateAccess('elevator')">
+        <div class="access-icon">🛗</div>
+        <h4>Elevator</h4>
+        <div class="access-indicator" id="indicator-elevator">
+            <span class="indicator-circle">⏳</span>
+        </div>
+        <p>Scan QR for floor access</p>
+    </div>
+    <div class="access-card" data-type="parking" onclick="simulateAccess('parking')">
+        <div class="access-icon">🅿️</div>
+        <h4>Parking</h4>
+        <div class="access-indicator" id="indicator-parking">
+            <span class="indicator-circle">⏳</span>
+        </div>
+        <p>Scan QR at gate</p>
+    </div>
+</div>
+                    <div id="accessResult"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SERVICES SECTION -->
+        <section class="section" id="section-services">
+            <div class="card luxury-card">
+                <h2>In-Room QR Services</h2>
+                <p class="subtitle">Order food, request housekeeping, and more — all from your room.</p>
+                <div class="form-group">
+                    <label>Select Your Room</label>
+                    <select id="serviceRoomSelect" onchange="updateServiceRoom()"></select>
+                </div>
+            </div>
+            <div id="servicePanels" style="display:none;">
+                <div class="card luxury-card">
+                    <h3> Order Food</h3>
+                    <div class="grid-2" id="foodMenu"></div>
+                    <div id="foodCart" class="cart-preview"></div>
+                    <button class="btn btn-gold mt-2" onclick="placeFoodOrder()"> Place Order</button>
+                </div>
+                <div class="card luxury-card">
+                    <h3> Housekeeping / Make-Up Room</h3>
+                    <div class="form-group">
+                        <label>Request Type</label>
+                        <select id="hkRequestType">
+                            <option value="Make-Up Room">Make-Up Room</option>
+                            <option value="Fresh Towels">Fresh Towels</option>
+                            <option value="Extra Amenities">Extra Amenities</option>
+                            <option value="Do Not Disturb"> Do Not Disturb</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Preferred Time</label>
+                        <select id="hkTime">
+                            <option value="8AM-10AM">8:00 AM – 10:00 AM</option>
+                            <option value="10AM-12PM">10:00 AM – 12:00 PM</option>
+                            <option value="1PM-3PM">1:00 PM – 3:00 PM</option>
+                            <option value="3PM-5PM">3:00 PM – 5:00 PM</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-accent" onclick="submitHousekeeping()">📋 Submit Request</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- GALLERY SECTION -->
+        <section class="section" id="section-gallery">
+            <div class="card luxury-card gallery-hero-card">
+                <h2>ZB Suites Virtual Tour</h2>
+                <p class="subtitle">Explore our color-graded collection of hotel facilities and amenities</p>
+                <div class="hero-banner" id="photoshootHero">
+                    <div class="hero-content">
+                        <h3>ZB Suites · Through the Lens</h3>
+                        <p class="photo-meta" id="photoCount">Loading visual stories…</p>
+                    </div>
+                </div>
+            </div>
+            <div class="card luxury-card">
+                <div class="gallery-header">
+                    <h3> Hotel Facilities Gallery</h3>
+                    <p class="subtitle">Click any category to expand and browse photos</p>
+                </div>
+                <div class="photo-grid" id="photoshootGrid"></div>
+            </div>
+        </section>
+
+        <!-- CHECK-OUT SECTION -->
+        <section class="section" id="section-checkout">
+            <div class="card luxury-card">
+                <h2>Smart Check-Out</h2>
+                <p class="subtitle">Review your bill and settle your stay seamlessly.</p>
+                <div class="form-group">
+                    <label>Select Guest</label>
+                    <select id="checkoutGuestSelect" onchange="updateCheckoutInfo()"></select>
+                </div>
+                <div id="checkoutInfo" class="checkout-bill" style="display:none;">
+                    <div class="table-wrap">
+                        <table id="checkoutBillTable">
+                            <thead><tr><th>Item</th><th>Details</th><th>Amount</th></tr></thead>
+                            <tbody id="checkoutBillBody"></tbody>
+                            <tfoot><tr class="total-row"><td colspan="2">Total Due</td><td id="checkoutTotal">₱0.00</td></tr></tfoot>
+                        </table>
+                    </div>
+                    <div id="checkoutStatus"></div>
+                    <div class="text-center mt-2">
+                        <button class="btn btn-danger" onclick="processCheckout()" id="checkoutBtn"> Settle &amp; Check-Out</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ADMIN SECTION -->
+        <section class="section" id="section-admin">
+            <div class="card luxury-card">
+                <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px;margin-bottom:24px;">
+                    <div>
+                        <h2 style="margin-bottom:0;">Admin Dashboard</h2>
+                        <p class="subtitle" style="margin-bottom:0;border:none;padding:0;">Manage hotel operations &amp; analytics</p>
+                    </div>
+                    <div style="display:flex;gap:12px;align-items:center;">
+                        <span id="adminStatusMessage"></span>
+                        <button id="adminLogoutBtn" class="btn btn-danger btn-sm" onclick="logoutAdmin()" style="display:none;">🚪 Logout</button>
+                    </div>
+                </div>
+                <div class="grid-3" id="adminStats"></div>
+            </div>
+            <div class="card luxury-card">
+                <h3> Room Occupancy Overview</h3>
+                <div class="room-grid" id="adminRoomGrid"></div>
+            </div>
+            <div class="card luxury-card">
+                <h3> Guest Activity Log</h3>
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Time</th>
+                                <th>Guest</th>
+                                <th>Room</th>
+                                <th>Action</th>
+                                <th>Details</th>
+                            </tr>
+                        </thead>
+                        <tbody id="adminLogBody"></tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="card luxury-card">
+                <h3> Payment Records</h3>
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Guest</th>
+                                <th>Room</th>
+                                <th>Method</th>
+                                <th>Amount</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="adminPaymentsBody"></tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="action-buttons" style="display:flex;gap:12px;justify-content:center;margin-top:24px;">
+                <button class="btn btn-outline" onclick="resetAllData()">🔄 Reset Demo Data</button>
+            </div>
+        </section>
+
+    </div><!-- /main-container -->
+
+    <!-- Generic Modal -->
+    <div class="modal-overlay" id="modalOverlay" style="display:none;" onclick="closeModal(event)">
+        <div id="modalContent" onclick="event.stopPropagation()"></div>
+    </div>
+
+    <!-- Room Photo Modal -->
+    <div class="modal-overlay room-photo-modal-overlay" id="roomPhotoModal" style="display:none;" onclick="closeRoomPhotoModal(event)">
+        <div class="room-photo-modal" onclick="event.stopPropagation()">
+            <button class="room-photo-close" type="button" onclick="closeRoomPhotoModal()">×</button>
+            <h3 id="roomPhotoTitle" style="font-family:var(--font-serif);color:var(--pine-deep);margin-bottom:8px;">Room Preview</h3>
+            <div class="room-photo-stage">
+                <img id="roomPhotoImage" class="room-photo-image" src="" alt="Room preview">
+            </div>
+            <div class="room-photo-thumbs" id="roomPhotoThumbs"></div>
+            <div class="room-photo-controls">
+                <button class="btn btn-outline btn-sm" type="button" onclick="zoomRoomPhoto(-0.2)">− Zoom Out</button>
+                <button class="btn btn-outline btn-sm" type="button" onclick="zoomRoomPhoto(0.2)">+ Zoom In</button>
+                <button class="btn btn-accent btn-sm" type="button" onclick="resetRoomPhotoZoom()">Reset</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="photos.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
