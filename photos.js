@@ -1,6 +1,14 @@
-// ZB Suites Baguio - Photo Gallery Data
-// Organized by categories based on actual folder structure
-
+/**
+ * ZB Suites Baguio — gallery data only (paths + categories).
+ *
+ * PHOTO_PATHS: list every image file relative to where index.html lives (same folder as this file).
+ *   If you move or rename the photoshoot folder, update these strings so the site can find files again.
+ *
+ * PHOTO_CATEGORIES: filled automatically below — each category groups paths whose text matches
+ *   keywords like "LOBBY" or "ROOM 702". You can add new categories or icons without touching script.js.
+ *
+ * window.PHOTO_PATHS / window.PHOTO_CATEGORIES are attached at the bottom so script.js can read them.
+ */
 const PHOTO_PATHS = [
     "ZHONGKE BOLE PHOTOSHOOT/COLOR GRADED/CONFERENCE ROOM 1/CONFERENCE ROOM-24.jpg",
     "ZHONGKE BOLE PHOTOSHOOT/COLOR GRADED/CONFERENCE ROOM 1/CONFERENCE ROOM-26.jpg",
@@ -131,7 +139,7 @@ const PHOTO_PATHS = [
     "ZHONGKE BOLE PHOTOSHOOT/RAW/X-SOCIAL AREA 2/IMG_0508.JPG"
 ];
 
-// Organize photos by category based on folder structure
+// Category metadata (icons + blurbs for the gallery UI); photos[] is populated in the loop further down.
 const PHOTO_CATEGORIES = {
     'CONFERENCE ROOM 1': {
         icon: '🏛️',
@@ -205,7 +213,7 @@ const PHOTO_CATEGORIES = {
     }
 };
 
-// Sort photos into categories based on path
+// Assign each file path to exactly one category by matching words in the path (case-insensitive).
 PHOTO_PATHS.forEach(path => {
     const upperPath = path.toUpperCase();
     
@@ -240,14 +248,14 @@ PHOTO_PATHS.forEach(path => {
     }
 });
 
-// Remove empty categories
+// Drop categories that ended up with zero images so the gallery does not show empty cards.
 for (const category in PHOTO_CATEGORIES) {
     if (PHOTO_CATEGORIES[category].photos.length === 0) {
         delete PHOTO_CATEGORIES[category];
     }
 }
 
-// Export for use in other files
+// Make lists visible to script.js (loaded after this file in index.html).
 if (typeof window !== 'undefined') {
     window.PHOTO_PATHS = PHOTO_PATHS;
     window.PHOTO_CATEGORIES = PHOTO_CATEGORIES;

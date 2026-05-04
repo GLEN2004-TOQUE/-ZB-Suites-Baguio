@@ -1,5 +1,15 @@
+/**
+ * ZB Suites Baguio — single-file app logic (plain JavaScript, no React/Vue/build tools).
+ *
+ * What this file does (high level):
+ *  - Reads/writes guest and room data in the browser via localStorage (survives refresh; not shared between devices).
+ *  - Powers section navigation, check-in → payment → QR, services, gallery, check-out, and the admin demo dashboard.
+ *  - Shows QR codes on a canvas using qr-creator.min.js (loaded from index.html before this file).
+ *
+ * For clients: change prices, room list, or demo admin password by searching this file and photos.js only.
+ */
 (function() {
-        // ==================== DATA STORE (localStorage) ====================
+        // ----- Data store: all demo database rows live in localStorage under this key -----
         const STORAGE_KEY = 'zb_suites_data';
 
         function getDefaultData() {
@@ -49,6 +59,19 @@
             localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
         }
 
+        /** If a gallery image path is wrong or missing, show a simple local SVG instead of loading an external placeholder site. */
+        function getPlaceholderDataUrl(caption, width, height) {
+            var w = width || 400;
+            var h = height || 300;
+            var safe = String(caption || 'Image')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+            var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + w + '" height="' + h + '"><rect fill="#f0ebe3" width="100%" height="100%"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#5c3d2e" font-family="system-ui,sans-serif" font-size="14">' + safe + '</text></svg>';
+            return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+        }
+
         let appData = loadData();
         if (!appData.foodMenu) appData = getDefaultData();
         
@@ -73,10 +96,10 @@
         
         saveData(appData);
 
-        // ==================== ADMIN AUTH ====================
-const ADMIN_AUTH_KEY = 'zb_admin_auth';
-const ADMIN_PASSWORD = 'admin123'; // Demo password
-const AUTH_EXPIRY = 60 * 60 * 1000; // 1 hour
+        // ----- Admin demo: password is hard-coded for prototypes only; replace before production -----
+        const ADMIN_AUTH_KEY = 'zb_admin_auth';
+        const ADMIN_PASSWORD = 'admin123';
+        const AUTH_EXPIRY = 60 * 60 * 1000; // session length in ms (1 hour)
 
 function isAdminAuthenticated() {
     const authData = localStorage.getItem(ADMIN_AUTH_KEY);
@@ -695,12 +718,47 @@ function showLogoutConfirmation() {
                 qrCard.style.display = 'block';
                 document.getElementById('assignedRoom').textContent = guest.roomNumber;
                 const qrDisplay = document.getElementById('qrCodeDisplay');
-                const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(guest.qrData)}`;
-                qrDisplay.innerHTML = `
-                    <img src="${qrUrl}" alt="Guest QR Access Code" style="max-width:220px;height:auto;border-radius:var(--radius-sm);box-shadow:var(--shadow-lg);" 
-                         onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjIwIiBoZWlnaHQ9IjIyMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMjIwIiBoZWlnaHQ9IjIyMCIgZmlsbD0iI2Y5ZjlhOSIgc3Ryb2tlPSIjMzMzIiBzdHJva2Utd2lkdGg9IjIiIHJ4PSI4Ii8+PHRleHQgeD0iMTEwIiB5PSIxMjAiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzMzMyIgdGV4dC1hbmNob3I9Im1pZGRsZSI+UVI6ICR7Z3Vlc3QucXJEYXRhLnN1YnN0cmluZygwLDMwKS4ufS4uPC90ZXh0Pjwvc3ZnPg=='">
-                    <div class="qr-label" style="font-weight:700;color:var(--success);margin-top:12px;font-size:0.95rem;">Scan everywhere: Room • Elevator • Parking • Services</div>
-                `;
+                if (qrDisplay) {
+                    qrDisplay.innerHTML = '';
+                    var canvas = document.createElement('canvas');
+                    canvas.width = 220;
+                    canvas.height = 220;
+                    canvas.setAttribute('role', 'img');
+                    canvas.setAttribute('aria-label', 'Guest QR access code');
+                    canvas.style.cssText = 'max-width:220px;height:auto;border-radius:var(--radius-sm);box-shadow:var(--shadow-lg);border:3px solid var(--success);display:block;margin:0 auto 12px;';
+                    qrDisplay.appendChild(canvas);
+                    try {
+                        if (typeof QrCreator !== 'undefined' && QrCreator.render) {
+                            QrCreator.render({
+                                text: guest.qrData,
+                                size: 220,
+                                fill: '#1a2e1f',
+                                background: '#ffffff',
+                                radius: 0.08,
+                                ecLevel: 'M'
+                            }, canvas);
+                        } else {
+                            throw new Error('QrCreator not loaded');
+                        }
+                    } catch (qrErr) {
+                        var ctx = canvas.getContext('2d');
+                        if (ctx) {
+                            ctx.fillStyle = '#f0f5f0';
+                            ctx.fillRect(0, 0, 220, 220);
+                            ctx.strokeStyle = '#2d5a3b';
+                            ctx.lineWidth = 3;
+                            ctx.strokeRect(6, 6, 208, 208);
+                            ctx.fillStyle = '#1a2e1f';
+                            ctx.font = '12px system-ui,sans-serif';
+                            ctx.fillText('QR unavailable — check qr-creator.min.js', 10, 112);
+                        }
+                    }
+                    var qrLabel = document.createElement('div');
+                    qrLabel.className = 'qr-label';
+                    qrLabel.style.cssText = 'font-weight:700;color:var(--success);margin-top:12px;font-size:0.95rem;text-align:center;';
+                    qrLabel.textContent = 'Scan everywhere: Room • Elevator • Parking • Services';
+                    qrDisplay.appendChild(qrLabel);
+                }
             } else {
                 showToast('QR display error - refresh page.', 'error');
             }
@@ -1000,7 +1058,7 @@ window.simulateAccess = function(type) {
                 document.getElementById('qrResultCard').style.display = 'none';
                 document.getElementById('checkoutInfo').style.display = 'none';
                 document.getElementById('servicePanels').style.display = 'none';
-                document.getElementById('accessInfo').style.display = 'none';
+                document.getElementById('accessPanels').style.display = 'none';
                 ['room', 'elevator', 'parking'].forEach(type => {
                     const ind = document.getElementById('indicator-' + type);
                     if (ind) { ind.className = 'indicator';
@@ -1170,7 +1228,7 @@ function renderPhotoGallery() {
         
         categoryCard.innerHTML = `
             <div class="category-card-preview">
-                <img src="${previewPhoto}" alt="${categoryName}" class="category-preview-img" onerror="this.src='https://placehold.co/400x300/f0ebe3/5c3d2e?text=${categoryName}'">
+                <img src="${previewPhoto}" alt="${categoryName}" class="category-preview-img" onerror="this.onerror=null;this.src='${getPlaceholderDataUrl(categoryName, 400, 300)}'">
                 <div class="category-card-overlay">
                     <span class="category-card-icon">${categoryData.icon}</span>
                     <h3 class="category-card-title">${categoryName}</h3>
@@ -1210,7 +1268,7 @@ window.openCategoryModal = function(categoryName) {
                 <div class="category-photo-grid">
                     ${categoryData.photos.map((photo, idx) => `
                         <div class="category-photo-item" onclick="openFullscreenPhoto(${idx})">
-                            <img src="${photo}" alt="${categoryName} - ${idx + 1}" class="category-photo-thumb" loading="lazy" onerror="this.src='https://placehold.co/400x300/f0ebe3/5c3d2e?text=Photo+${idx+1}'">
+                            <img src="${photo}" alt="${categoryName} - ${idx + 1}" class="category-photo-thumb" loading="lazy" onerror="this.onerror=null;this.src='${getPlaceholderDataUrl(categoryName + ' · ' + (idx + 1), 400, 300)}'">
                             <div class="category-photo-overlay">
                                 <span class="zoom-icon">🔍</span>
                                 <span class="photo-number">${idx + 1}</span>
@@ -1269,7 +1327,7 @@ window.openFullscreenPhoto = function(index) {
             <div class="fullscreen-photo-body">
                 <button class="fullscreen-nav prev" onclick="navigateFullscreenPhoto(${prevIndex}, event)">‹</button>
                 <div class="fullscreen-image-container" id="fullscreenImageContainer">
-                    <img id="fullscreenImage" src="${photo}" alt="${currentCategoryName}" class="fullscreen-image" style="transform: scale(1);" onerror="this.src='https://placehold.co/1200x800/f0ebe3/5c3d2e?text=Image+Loading'">
+                    <img id="fullscreenImage" src="${photo}" alt="${currentCategoryName}" class="fullscreen-image" style="transform: scale(1);" onerror="this.onerror=null;this.src='${getPlaceholderDataUrl('Image loading', 1200, 800)}'">
                 </div>
                 <button class="fullscreen-nav next" onclick="navigateFullscreenPhoto(${nextIndex}, event)">›</button>
             </div>
@@ -1444,7 +1502,7 @@ function renderHomePhotoStrip() {
     }
     
     strip.innerHTML = featured.map(path => `
-        <img class="strip-photo" src="${path}" alt="ZB Suites highlight" loading="lazy" onerror="this.src='https://placehold.co/800x600/f0ebe3/5c3d2e?text=Photo'">
+        <img class="strip-photo" src="${path}" alt="ZB Suites highlight" loading="lazy" onerror="this.onerror=null;this.src='${getPlaceholderDataUrl('Photo', 800, 600)}'">
     `).join('');
 }
 

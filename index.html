@@ -1,15 +1,24 @@
 <!DOCTYPE html>
+<!--
+  ZB Suites Baguio — static front-end only (no build step, no server required).
+  Files for your team / client:
+    • index.html   — page structure and content blocks
+    • styles.css   — all visual styling (colors, layout, responsive rules)
+    • photos.js    — gallery image paths and categories (edit paths if folders move)
+    • qr-creator.min.js — small MIT library that draws QR codes in the browser (no QR API calls)
+    • script.js    — check-in flow, admin demo, localStorage “database”
+  Open index.html in a browser; data is stored in the visitor’s browser (localStorage), suitable for demos.
+-->
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>ZB Suites Baguio | Smart Luxury Check-In</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&display=swap" rel="stylesheet">
+    <!-- Fonts use the visitor’s system (no Google Fonts or other CDN). See styles.css :root. -->
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+    <!-- Short popup messages (success / error) are injected here by script.js -->
     <div class="toast-container" id="toastContainer"></div>
 
     <header class="header">
@@ -420,6 +429,8 @@
         </div>
     </div>
 
+    <!-- Load order: QR helper first, then photo lists, then main app logic -->
+    <script src="qr-creator.min.js"></script>
     <script src="photos.js"></script>
     <script src="script.js"></script>
 </body>
