@@ -336,8 +336,29 @@
                         <table id="checkoutBillTable">
                             <thead><tr><th>Item</th><th>Details</th><th>Amount</th></tr></thead>
                             <tbody id="checkoutBillBody"></tbody>
-                            <tfoot><tr class="total-row"><td colspan="2">Total Due</td><td id="checkoutTotal">₱0.00</td></tr></tfoot>
+                            <tfoot>
+                                <tr><td colspan="2">Total Bill</td><td id="checkoutGrandTotal">₱0.00</td></tr>
+                                <tr><td colspan="2">Total Paid</td><td id="checkoutPaidTotal">₱0.00</td></tr>
+                                <tr class="total-row"><td colspan="2">Pending Balance</td><td id="checkoutTotal">₱0.00</td></tr>
+                            </tfoot>
                         </table>
+                    </div>
+                    <div id="checkoutPaymentMethods" class="payment-summary" style="display:none; margin-top:14px;">
+                        <p><strong>Select payment method for pending balance:</strong></p>
+                        <div class="grid-3 payment-methods payment-methods-enhanced">
+                            <button type="button" class="payment-method payment-method-card checkout-payment-method" data-method="GCash" onclick="selectCheckoutPaymentMethod('GCash')">
+                                <strong> GCash</strong>
+                                <small>Instant mobile payment</small>
+                            </button>
+                            <button type="button" class="payment-method payment-method-card checkout-payment-method" data-method="Bank Transfer" onclick="selectCheckoutPaymentMethod('Bank Transfer')">
+                                <strong> Bank Transfer</strong>
+                                <small>BPI, BDO, Metrobank</small>
+                            </button>
+                            <button type="button" class="payment-method payment-method-card checkout-payment-method" data-method="Credit Card" onclick="selectCheckoutPaymentMethod('Credit Card')">
+                                <strong> Credit Card</strong>
+                                <small>Visa, Mastercard, JCB</small>
+                            </button>
+                        </div>
                     </div>
                     <div id="checkoutStatus"></div>
                     <div class="text-center mt-2">

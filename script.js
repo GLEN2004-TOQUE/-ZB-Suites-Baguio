@@ -977,9 +977,17 @@ window.simulateAccess = function(type) {
             infoDiv.style.display = 'block';
             const allItems = [...(guest.billingItems || [])];
             const tbody = document.getElementById('checkoutBillBody');
+            const paymentMethodsDiv = document.getElementById('checkoutPaymentMethods');
+            const checkoutBtn = document.getElementById('checkoutBtn');
             let totalDue = 0;
+            let totalBill = 0;
+            let totalPaid = 0;
             tbody.innerHTML = allItems.map(b => {
                 const isPaid = b.paid !== false;
+                totalBill += b.amount;
+                if (isPaid) {
+                    totalPaid += b.amount;
+                }
                 totalDue += isPaid ? 0 : b.amount;
                 return `<tr>
               <td>${b.item}</td>
@@ -987,26 +995,42 @@ window.simulateAccess = function(type) {
               <td>₱${b.amount.toLocaleString()}</td>
              </tr>`;
             }).join('');
+            document.getElementById('checkoutGrandTotal').textContent = '₱' + totalBill.toLocaleString();
+            document.getElementById('checkoutPaidTotal').textContent = '₱' + totalPaid.toLocaleString();
             document.getElementById('checkoutTotal').textContent = '₱' + totalDue.toLocaleString();
             const statusDiv = document.getElementById('checkoutStatus');
             const checkoutTime = new Date(guest.checkOutTime);
             const now = new Date();
+            window._checkoutPaymentMethod = null;
+            document.querySelectorAll('.checkout-payment-method').forEach(btn => btn.classList.remove('selected'));
             if (totalDue > 0) {
                 statusDiv.innerHTML =
-                    '<span class="badge badge-danger">⚠️ Unpaid Charges — QR access restricted until settled</span>';
-                document.getElementById('checkoutBtn').disabled = false;
-                document.getElementById('checkoutBtn').textContent = '💳 Pay & Check-Out';
+                    '<span class="badge badge-danger">⚠️ Unpaid Charges — select payment method to continue check-out</span>';
+                if (paymentMethodsDiv) paymentMethodsDiv.style.display = 'block';
+                checkoutBtn.disabled = true;
+                checkoutBtn.textContent = '💳 Pay & Check-Out';
             } else if (now > checkoutTime) {
                 statusDiv.innerHTML =
                     '<span class="badge badge-warning">⏰ Past check-out time — please proceed to exit</span>';
-                document.getElementById('checkoutBtn').disabled = false;
-                document.getElementById('checkoutBtn').textContent = '🔓 Complete Check-Out';
+                if (paymentMethodsDiv) paymentMethodsDiv.style.display = 'none';
+                checkoutBtn.disabled = false;
+                checkoutBtn.textContent = '🔓 Complete Check-Out';
             } else {
                 statusDiv.innerHTML = '<span class="badge badge-success">✅ All clear — ready to check out</span>';
-                document.getElementById('checkoutBtn').disabled = false;
-                document.getElementById('checkoutBtn').textContent = '🔓 Check-Out Now';
+                if (paymentMethodsDiv) paymentMethodsDiv.style.display = 'none';
+                checkoutBtn.disabled = false;
+                checkoutBtn.textContent = '🔓 Check-Out Now';
             }
             window._checkoutTotalDue = totalDue;
+        };
+
+        window.selectCheckoutPaymentMethod = function(method) {
+            window._checkoutPaymentMethod = method;
+            document.querySelectorAll('.checkout-payment-method').forEach(btn => {
+                btn.classList.toggle('selected', btn.dataset.method === method);
+            });
+            const checkoutBtn = document.getElementById('checkoutBtn');
+            if (checkoutBtn) checkoutBtn.disabled = false;
         };
 
         window.processCheckout = function() {
@@ -1014,14 +1038,26 @@ window.simulateAccess = function(type) {
             const guestId = parseInt(sel.value);
             const guest = appData.guests.find(g => g.id === guestId && g.status === 'checked-in');
             if (!guest) return;
+            const billItems = [...(guest.billingItems || [])];
+            const totalBill = billItems.reduce((sum, item) => sum + (item.amount || 0), 0);
+            const totalPaidBefore = billItems
+                .filter(item => item.paid !== false)
+                .reduce((sum, item) => sum + (item.amount || 0), 0);
             const totalDue = window._checkoutTotalDue || 0;
+            const paymentMethod = window._checkoutPaymentMethod || guest.paymentMethod || null;
             if (totalDue > 0) {
+                if (!paymentMethod) {
+                    showToast('Please select a payment method first.', 'warning');
+                    return;
+                }
                 guest.billingItems.forEach(b => b.paid = true);
                 if (guest.foodOrders) guest.foodOrders.forEach(f => f.paid = true);
                 guest.totalPaid = (guest.totalPaid || 0) + totalDue;
-                showToast(`💳 Payment of ₱${totalDue.toLocaleString()} processed.`, 'success');
-                addLog(guest.name, guest.roomNumber, 'Payment Settled', `₱${totalDue.toLocaleString()} paid at check-out`);
+                guest.paymentMethod = paymentMethod;
+                showToast(`💳 Payment of ₱${totalDue.toLocaleString()} processed via ${paymentMethod}.`, 'success');
+                addLog(guest.name, guest.roomNumber, 'Payment Settled', `₱${totalDue.toLocaleString()} paid at check-out via ${paymentMethod}`);
             }
+            const totalPaidAfter = totalPaidBefore + totalDue;
             const room = appData.rooms.find(r => r.number === guest.roomNumber);
             if (room) { room.occupied = false;
                 room.guestId = null; }
@@ -1030,11 +1066,61 @@ window.simulateAccess = function(type) {
             saveData(appData);
             addLog(guest.name, guest.roomNumber, 'Check-Out Completed', 'Room released, QR deactivated');
             showToast(`🔓 Check-out complete! Room ${guest.roomNumber} is now available.`, 'success');
+            showCheckoutReceipt(guest, {
+                billItems,
+                totalBill,
+                totalPaidBefore,
+                totalDue,
+                totalPaidAfter,
+                paymentMethod: paymentMethod || 'N/A',
+            });
             document.getElementById('checkoutInfo').style.display = 'none';
             document.getElementById('checkoutGuestSelect').value = '';
             refreshAllDynamicContent();
             updateCheckoutInfo();
         };
+
+        function showCheckoutReceipt(guest, summary) {
+            const modal = document.getElementById('modalOverlay');
+            const content = document.getElementById('modalContent');
+            if (!modal || !content) return;
+            const paidRows = summary.billItems
+                .filter(item => item.paid !== false || summary.totalDue > 0)
+                .map(item => `
+                    <tr>
+                        <td>${item.item}</td>
+                        <td>₱${(item.amount || 0).toLocaleString()}</td>
+                    </tr>
+                `)
+                .join('') || '<tr><td colspan="2">No paid items found.</td></tr>';
+
+            content.innerHTML = `
+                <div class="modal">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                        <h2 style="margin-bottom:0;">Check-Out Receipt</h2>
+                        <button onclick="closeModal({ target: document.getElementById('modalOverlay') })" style="background:none;border:none;font-size:1.4rem;cursor:pointer;color:var(--text-muted);line-height:1;">&times;</button>
+                    </div>
+                    <p class="subtitle">Guest: <strong>${guest.name}</strong> | Room <strong>${guest.roomNumber}</strong></p>
+                    <div class="table-wrap">
+                        <table>
+                            <thead><tr><th>Paid Item</th><th>Amount</th></tr></thead>
+                            <tbody>${paidRows}</tbody>
+                        </table>
+                    </div>
+                    <div style="margin-top:14px;background:var(--pine-pale);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;">
+                        <p><strong>Payment Method:</strong> ${summary.paymentMethod}</p>
+                        <p><strong>Amount Paid at Check-Out:</strong> ₱${summary.totalDue.toLocaleString()}</p>
+                        <p><strong>Total Already Paid:</strong> ₱${summary.totalPaidBefore.toLocaleString()}</p>
+                        <p><strong>Total Paid (Final):</strong> ₱${summary.totalPaidAfter.toLocaleString()}</p>
+                        <p><strong>Total Bill:</strong> ₱${summary.totalBill.toLocaleString()}</p>
+                    </div>
+                    <div class="text-center mt-2">
+                        <button class="btn btn-primary" onclick="closeModal({ target: document.getElementById('modalOverlay') })">Close</button>
+                    </div>
+                </div>
+            `;
+            modal.style.display = 'flex';
+        }
 
         // ==================== MODAL ====================
         window.closeModal = function(event) {
